@@ -1,0 +1,55 @@
+---
+title: "Practical Machine Learning - Final Assignment"
+author: "Sekoul Krastev"
+date: "Thursday, December 18, 2014"
+output: html_document
+---
+
+
+*Introduction*
+First we need to load the necessary library, load the data into our train/test data frames and set the seed.
+
+```{r}
+library(caret)
+
+train <- read.csv("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv");
+test <- read.csv("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv");
+
+set.seed(123)
+````
+
+
+Next, we need to create a subset of the training data that includes only the variables which are relevant to us. To do this, we need to look at the dataset and remove the variables that are largely full of NA's, as well as those that are timeseries/index data and which provide positional information about each data point. To this, we can inspect the **train** data frame and then subset only the variables we are interested in:
+
+```{r}
+train2 <- subset(train, select = c(classe,     new_window,     num_window,     roll_belt,	pitch_belt,	yaw_belt, total_accel_belt, gyros_belt_x,	gyros_belt_y,	gyros_belt_z,	accel_belt_x,	accel_belt_y,	accel_belt_z,	magnet_belt_x,	magnet_belt_y,	magnet_belt_z,	roll_arm,	pitch_arm,	yaw_arm,	total_accel_arm, gyros_arm_x,	gyros_arm_y,	gyros_arm_z,	accel_arm_x,	accel_arm_y,	accel_arm_z,	magnet_arm_x,	magnet_arm_y,	magnet_arm_z, roll_dumbbell,	pitch_dumbbell,	yaw_dumbbell,total_accel_dumbbell, gyros_dumbbell_x, gyros_dumbbell_y, gyros_dumbbell_z, accel_dumbbell_x, accel_dumbbell_y, accel_dumbbell_z, magnet_dumbbell_x, magnet_dumbbell_y, magnet_dumbbell_z, roll_forearm, pitch_forearm, yaw_forearm, total_accel_forearm, gyros_forearm_x, gyros_forearm_y, gyros_forearm_z, accel_forearm_x, accel_forearm_y, accel_forearm_z, magnet_forearm_x, magnet_forearm_y, magnet_forearm_z))
+```
+
+
+Now, we have 60 variables instead of the original 160. Next, we need to consider the large amount of observations in our **train2** data frame. We can attempt to build a model with less than the 19622 observations we have, as the full analysis would probably take too long to be feasible. Therefore, we randomly sample 2000 observationout of this data frame, with replacement.
+
+```{r}
+subtrain <- train2[sample(1:nrow(train),2000,replace=TRUE),];
+```
+
+
+Now, we are ready to create the model fit. To do this, we will use a random forest algorithm. We will pass it the **subtrain** data frame we just created and make sure it is pre-processed to make it centered and scaled. We will also add an additional check of the accuracy of the algorithm through cross validation. The final model fit call looks as follows:
+```{r}
+modFit <- train(classe ~ ., data=subtrain, method="rf", preProcess=c("center", "scale"), trControl=trainControl(method="cv"))
+modFit
+```
+
+As we can see, the model creates a fairly good fit which has been cross-validated with K=10 folds.
+
+We can now apply this model to our test set to get our final results:
+
+```{r}
+predict(modFit, test)
+```
+
+To check how likely each prediction is according to our model, we can take a look at the associated probabilities:
+```{r}
+predict(modFit, test, type='prob')
+```
+
+
